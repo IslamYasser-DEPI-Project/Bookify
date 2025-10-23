@@ -1,0 +1,34 @@
+﻿using Bookify.DA.Entities;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection.Emit;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Bookify.DA.Data
+{
+    public class AppDbContext : DbContext
+    {
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+        {
+        }
+
+        public DbSet<Hotel> Hotels { get; set; }
+        public DbSet<RoomType> RoomTypes { get; set; }
+        public DbSet<Room> Rooms { get; set; }
+        public DbSet<Staff> Staffs { get; set; }
+        public DbSet<User> Users { get; set; }
+        public DbSet<Customer> Customers { get; set; }
+        public DbSet<Booking> Bookings { get; set; }
+        public DbSet<Payment> Payments { get; set; }
+        public DbSet<PaymentType> PaymentTypes { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+        }
+
+    }
+}

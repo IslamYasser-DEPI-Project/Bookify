@@ -1,4 +1,7 @@
 
+using Bookify.DA;
+using Microsoft.EntityFrameworkCore;
+
 namespace Bookify.API
 {
     public class Program
@@ -13,6 +16,12 @@ namespace Bookify.API
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
+
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+            builder.Services.AddDataAccessServices(connectionString);
+
+
 
             var app = builder.Build();
 
