@@ -9,12 +9,12 @@ namespace Bookify.DA.Entities
 {
     public class Hotel
     {
-        public int HotelID { get; set; }
+        public int Id { get; set; }
         public string Name { get; set; }
         public string Location { get; set; }
         public string ContactInfo { get; set; }
 
-        public ICollection<Staff> Staffs { get; set; }
+        
         public ICollection<Room> Rooms { get; set; }
     }
 }

@@ -46,6 +46,7 @@ namespace Bookify.DA.Repositories
         public async Task Delete(int id)
         {
             var entity = await GetById(id);
+            
 
             _dbSet.Remove(entity);
 

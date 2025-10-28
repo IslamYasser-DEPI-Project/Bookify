@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Bookify.DA.Enums;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,11 +9,11 @@ namespace Bookify.DA.Entities
 {
     public class Room
     {
-        public int RoomID { get; set; }
+        public int Id { get; set; }
         public int HotelID { get; set; }
         public int RoomTypeID { get; set; }
         public string RoomNumber { get; set; }
-        public string Status { get; set; }
+        public RoomStatus Status { get; set; } = RoomStatus.Available;
 
 
         public Hotel Hotel { get; set; }

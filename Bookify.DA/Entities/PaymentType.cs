@@ -8,7 +8,7 @@ namespace Bookify.DA.Entities
 {
     public class PaymentType
     {
-        public int PaymentTypeID { get; set; }
+        public int Id { get; set; }
         public string TypeName { get; set; }
         public string Description { get; set; }
 
