@@ -1,15 +1,15 @@
 ﻿using Bookify.DA.Contracts;
 using Bookify.DA.Contracts.RepositoryContracts;
-using Bookify.DA.Repositories;
+using Bookify.DA.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Bookify.DA.Data
+namespace Bookify.DA.Repositories
 {
-    internal class UnitOfWork : IUnitOfWork
+    public class UnitOfWork : IUnitOfWork
     {
         private readonly AppDbContext _db;
 
@@ -36,14 +36,14 @@ namespace Bookify.DA.Data
         }
 
 
-        public IBookingRepository Bookings => _bookings.Value;
-        public ICustomerRepository Customers => _customers.Value;
-        public IHotelRepository Hotels => _hotels.Value;
-        public IPaymentRepository Payments => _payments.Value;
-        public IPaymentTypeRepository PaymentTypes => _paymentTypes.Value;
-        public IRoomRepository Rooms => _rooms.Value;
-        public IRoomTypeRepository RoomTypes => _roomTypes.Value;
-        public IUserRepository Users => _users.Value;
+        public IBookingRepository BookingRepository => _bookings.Value;
+        public ICustomerRepository CustomerRepository => _customers.Value;
+        public IHotelRepository HotelRepository => _hotels.Value;
+        public IPaymentRepository PaymentRepository => _payments.Value;
+        public IPaymentTypeRepository PaymentTypeRepository => _paymentTypes.Value;
+        public IRoomRepository RoomRepository => _rooms.Value;
+        public IRoomTypeRepository RoomTypeRepository => _roomTypes.Value;
+        public IUserRepository UserRepository => _users.Value;
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
