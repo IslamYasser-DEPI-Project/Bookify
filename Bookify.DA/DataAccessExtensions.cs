@@ -15,14 +15,14 @@ namespace Bookify.DA
     {
         public static IServiceCollection AddDataAccessServices(this IServiceCollection services, string connectionString)
         {
-            // Register DbContext
+            
             services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(connectionString));
 
-            // Register generic repository
-            services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+            
+            services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>)); //should be unit of work ... add later
 
-            // Register other repositories or services here if any
+
 
             return services;
         }

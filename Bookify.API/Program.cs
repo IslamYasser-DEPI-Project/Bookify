@@ -1,5 +1,4 @@
 
-using Bookify.DA;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bookify.API
@@ -19,7 +18,7 @@ namespace Bookify.API
 
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-            builder.Services.AddDataAccessServices(connectionString);
+            
 
 
 
