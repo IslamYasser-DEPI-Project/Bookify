@@ -17,6 +17,6 @@ namespace Bookify.DA.Entities
         public decimal PricePerNight { get; set; }
         public int Capacity { get; set; }
 
-        public ICollection<Room> Rooms { get; set; }
+        public ICollection<Room> Rooms { get; set; } = new List<Room>();
     }
 }

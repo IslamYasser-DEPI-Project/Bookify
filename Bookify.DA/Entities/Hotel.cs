@@ -14,7 +14,7 @@ namespace Bookify.DA.Entities
         public string Location { get; set; }
         public string ContactInfo { get; set; }
 
-        
-        public ICollection<Room> Rooms { get; set; }
+
+        public ICollection<Room> Rooms { get; set; } = new List<Room>();
     }
 }

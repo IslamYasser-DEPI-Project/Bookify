@@ -16,7 +16,7 @@ namespace Bookify.DA.Contracts
         IPaymentTypeRepository PaymentTypeRepository { get; }
         IRoomRepository RoomRepository { get; }
         IRoomTypeRepository RoomTypeRepository { get; }
-        IUserRepository UserRepository { get; }
+ 
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     }

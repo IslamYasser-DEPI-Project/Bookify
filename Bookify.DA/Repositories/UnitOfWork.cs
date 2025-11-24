@@ -20,7 +20,7 @@ namespace Bookify.DA.Repositories
         private readonly Lazy<IPaymentTypeRepository> _paymentTypes;
         private readonly Lazy<IRoomRepository> _rooms;
         private readonly Lazy<IRoomTypeRepository> _roomTypes;
-        private readonly Lazy<IUserRepository> _users;
+       
 
         public UnitOfWork(AppDbContext db)
         {
@@ -32,7 +32,7 @@ namespace Bookify.DA.Repositories
             _paymentTypes = new Lazy<IPaymentTypeRepository>(() => new PaymentTypeRepository(_db));
             _rooms = new Lazy<IRoomRepository>(() => new RoomRepository(_db));
             _roomTypes = new Lazy<IRoomTypeRepository>(() => new RoomTypeRepository(_db));
-            _users = new Lazy<IUserRepository>(() => new UserRepository(_db));
+            
         }
 
 
@@ -43,7 +43,7 @@ namespace Bookify.DA.Repositories
         public IPaymentTypeRepository PaymentTypeRepository => _paymentTypes.Value;
         public IRoomRepository RoomRepository => _rooms.Value;
         public IRoomTypeRepository RoomTypeRepository => _roomTypes.Value;
-        public IUserRepository UserRepository => _users.Value;
+        
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {

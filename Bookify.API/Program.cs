@@ -1,4 +1,8 @@
+using Bookify.Application.Interfaces;
+using Bookify.Application.Services.Registeration_Services;
 using Bookify.DA;
+using Bookify.DA.Data;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bookify.API
@@ -16,9 +20,25 @@ namespace Bookify.API
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+            builder.Services.AddCors(o =>
+            {
+                o.AddPolicy("AllowAll", b =>
+                {
+                    b.AllowAnyOrigin()
+                     .AllowAnyMethod()
+                     .AllowAnyHeader();
+                });
+            });
+
+
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
             builder.Services.AddDataAccessServices(connectionString);
+            builder.Services.AddScoped<IAccountService, AccountService>();
+            builder.Services.AddIdentity<IdentityUser, IdentityRole>()
+    .AddEntityFrameworkStores<AppDbContext>();
+
+
 
 
 
@@ -33,6 +53,7 @@ namespace Bookify.API
 
             app.UseHttpsRedirection();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
 

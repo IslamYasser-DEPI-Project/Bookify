@@ -12,6 +12,6 @@ namespace Bookify.DA.Entities
         public string TypeName { get; set; }
         public string Description { get; set; }
 
-        public ICollection<Payment> Payments { get; set; }
+        public ICollection<Payment> Payments { get; set; } = new List<Payment>();
     }
 }
