@@ -1,8 +1,5 @@
-﻿using Bookify.DA.Entities;
-using System;
+using Bookify.DA.Entities;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Bookify.DA.Contracts.RepositoryContracts

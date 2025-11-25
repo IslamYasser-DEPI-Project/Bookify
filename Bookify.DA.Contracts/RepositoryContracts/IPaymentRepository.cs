@@ -1,15 +1,11 @@
-﻿using System;
+using Bookify.DA.Entities;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Bookify.DA.Entities;  
 
 namespace Bookify.DA.Contracts.RepositoryContracts
 {
     public interface IPaymentRepository : IGenericRepository<Payment>
     {
-
         Task<IEnumerable<Payment>> GetByBookingIdAsync(int bookingId);
         Task<Payment?> GetByPaymentNumberAsync(string paymentNumber);
     }
