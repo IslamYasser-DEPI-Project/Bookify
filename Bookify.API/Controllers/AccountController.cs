@@ -15,19 +15,23 @@ public class AccountController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
     {
-        var (success, errors) = await _accountService.RegisterAsync(registerDto);
+        var (success, errors, message) = await _accountService.RegisterAsync(registerDto);
         if (!success)
-            return BadRequest(new { errors }); // THIS returns the error array shown above
-        return Ok("Registration successful");
+            return BadRequest(new { errors });
+
+        if (!string.IsNullOrWhiteSpace(message) && message.Equals("Waiting for approval", StringComparison.OrdinalIgnoreCase))
+            return Accepted(new { message });
+
+        return Ok(new { message = message ?? "Registration successful" });
     }
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
     {
-        var (success, error) = await _accountService.LoginAsync(loginDto);
+        var (success, token, error) = await _accountService.LoginAsync(loginDto);
         if (!success)
-            return BadRequest(new { error }); 
-        return Ok("Login successful");
+            return BadRequest(new { error });
+        return Ok(new { token });
     }
 
 }

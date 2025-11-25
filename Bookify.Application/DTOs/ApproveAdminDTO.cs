@@ -4,11 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Bookify.DA.Enums
+namespace Bookify.Application.DTOs
 {
-    public enum UserRole
+    public class ApproveAdminDto
     {
-        Admin = 1,
-        Customer
+        public string Email { get; set; }
     }
 }
+    

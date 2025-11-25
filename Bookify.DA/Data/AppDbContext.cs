@@ -24,6 +24,7 @@ namespace Bookify.DA.Data
         public DbSet<Booking> Bookings { get; set; }
         public DbSet<Payment> Payments { get; set; }
         public DbSet<PaymentType> PaymentTypes { get; set; }
+        public DbSet<AdminApprovalRequest> AdminApprovalRequests { get; set;}
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

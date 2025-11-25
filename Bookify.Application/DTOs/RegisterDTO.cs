@@ -11,6 +11,9 @@ namespace Bookify.Application.DTOs
         public string Email { get; set; }
         public string Password { get; set; }
         public string ConfirmPassword { get; set; }
+
+        //"Admin" or "Customer" defaults is "Customer"
+        public string Role { get; set; }
     }
 
 
