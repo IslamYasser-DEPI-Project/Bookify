@@ -9,9 +9,9 @@ namespace Bookify.API.Controllers
     [Authorize]
     public class DebugController : ControllerBase
     {
-        // Call with same Authorization: Bearer <token> header you use for Admin endpoints
+        // Call with same Authorization:<token> header you use for Admin endpoints
         [HttpGet("whoami")]
-        
+        //listing claims of the current user
         public IActionResult WhoAmI()
         {
             var claims = User.Claims.Select(c => new { Type = c.Type, Value = c.Value }).ToList();
