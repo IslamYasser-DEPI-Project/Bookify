@@ -12,6 +12,9 @@ using Microsoft.OpenApi.Models;
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
+using System;
+using Microsoft.AspNetCore.Http;
+using Bookify.Application.Services;
 
 namespace Bookify.API
 {
@@ -24,6 +27,21 @@ namespace Bookify.API
             // Add services to the container.
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
+
+            //session support 
+            builder.Services.AddDistributedMemoryCache();
+         
+            builder.Services.AddSession(options =>
+            {
+                options.IdleTimeout = TimeSpan.FromMinutes(30);
+                options.Cookie.Name = ".Bookify.Session";
+                options.Cookie.HttpOnly = true;
+                options.Cookie.IsEssential = true;
+                //Lax for typical web flows, consider Strict for higher security needs.
+                options.Cookie.SameSite = SameSiteMode.Lax;
+                //force Secure.
+                options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+            });
 
             // Configure Swagger with JWT Bearer support
             builder.Services.AddSwaggerGen(c =>
@@ -66,6 +84,8 @@ namespace Bookify.API
             builder.Services.AddDataAccessServices(connectionString);
             builder.Services.AddScoped<IAccountService, AccountService>();
             builder.Services.AddScoped<IAdminService, AdminService>();
+            builder.Services.AddHttpContextAccessor();
+            builder.Services.AddScoped<IReservationCartService, ReservationCartService>();
             builder.Services.AddIdentity<IdentityUser, IdentityRole>()
                 .AddEntityFrameworkStores<AppDbContext>();
 
@@ -74,50 +94,50 @@ namespace Bookify.API
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             })
-.AddJwtBearer(options =>
-{
-    options.RequireHttpsMetadata = false; // <-- allow HTTP locally
-    options.SaveToken = true;
-    options.TokenValidationParameters = new TokenValidationParameters
+    .AddJwtBearer(options =>
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),
-        RoleClaimType = ClaimTypes.Role
-    };
+        options.RequireHttpsMetadata = false; // <-- allow HTTP locally
+        options.SaveToken = false; // do not persist token server-side in auth middleware
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),
+            RoleClaimType = ClaimTypes.Role
+        };
 
-    options.Events = new JwtBearerEvents
-    {
-        OnMessageReceived = ctx =>
+        options.Events = new JwtBearerEvents
         {
-            var auth = ctx.Request.Headers["Authorization"].FirstOrDefault();
-            var present = !string.IsNullOrEmpty(auth);
-            var startsWithBearer = present && auth!.StartsWith("Bearer ");
-            Console.WriteLine($"[Jwt] OnMessageReceived - Authorization header present: {present}, startsWithBearer: {startsWithBearer}");
-            return Task.CompletedTask;
-        },
-        OnAuthenticationFailed = ctx =>
-        {
-            Console.WriteLine($"[Jwt] AuthenticationFailed: {ctx.Exception?.Message}");
-            return Task.CompletedTask;
-        },
-        OnTokenValidated = ctx =>
-        {
-            Console.WriteLine($"[Jwt] TokenValidated for: {ctx.Principal?.Identity?.Name}");
-            return Task.CompletedTask;
-        },
-        OnChallenge = ctx =>
-        {
-            Console.WriteLine($"[Jwt] Challenge: error={ctx.Error}, desc={ctx.ErrorDescription}");
-            return Task.CompletedTask;
-        }
-    };
-});
+            OnMessageReceived = ctx =>
+            {
+                var auth = ctx.Request.Headers["Authorization"].FirstOrDefault();
+                var present = !string.IsNullOrEmpty(auth);
+                var startsWithBearer = present && auth!.StartsWith("Bearer ");
+                Console.WriteLine($"[Jwt] OnMessageReceived - Authorization header present: {present}, startsWithBearer: {startsWithBearer}");
+                return Task.CompletedTask;
+            },
+            OnAuthenticationFailed = ctx =>
+            {
+                Console.WriteLine($"[Jwt] AuthenticationFailed: {ctx.Exception?.Message}");
+                return Task.CompletedTask;
+            },
+            OnTokenValidated = ctx =>
+            {
+                Console.WriteLine($"[Jwt] TokenValidated for: {ctx.Principal?.Identity?.Name}");
+                return Task.CompletedTask;
+            },
+            OnChallenge = ctx =>
+            {
+                Console.WriteLine($"[Jwt] Challenge: error={ctx.Error}, desc={ctx.ErrorDescription}");
+                return Task.CompletedTask;
+            }
+        };
+    });
 
             var app = builder.Build();
 
@@ -131,8 +151,10 @@ namespace Bookify.API
                 app.UseSwaggerUI();
             }
 
-
             app.UseHttpsRedirection();
+
+            // enable session (session stores only reservation cart state; no tokens or credentials)
+            app.UseSession();
 
             app.UseAuthentication();
             app.UseAuthorization();

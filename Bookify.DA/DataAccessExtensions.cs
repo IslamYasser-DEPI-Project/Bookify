@@ -8,6 +8,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Bookify.DA.Contracts.RepositoryContracts;
+using Bookify.DA.Data;
+using Bookify.DA.Entities;
 
 namespace Bookify.DA
 {
@@ -19,10 +22,21 @@ namespace Bookify.DA
             services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(connectionString));
 
-            
-            services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>)); //should be unit of work ... add later
+            // generic repo
+            services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 
+            // specific repositories (registering so they can be injected individually if needed)
+            services.AddScoped<IBookingRepository, BookingRepository>();
+            services.AddScoped<ICustomerRepository, CustomerRepository>();
+            services.AddScoped<IHotelRepository, HotelRepository>();
+            services.AddScoped<IPaymentRepository, PaymentRepository>();
+            services.AddScoped<IPaymentTypeRepository, PaymentTypeRepository>();
+            services.AddScoped<IRoomRepository, RoomRepository>();
+            services.AddScoped<IRoomTypeRepository, RoomTypeRepository>();
+            services.AddScoped<IAdminApprovalRequest, AdminApprovalRequestRepository>();
 
+            // unit of work
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             return services;
         }

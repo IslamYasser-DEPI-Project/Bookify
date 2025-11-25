@@ -35,33 +35,29 @@ namespace Bookify.DA.Repositories
 
         public async Task Add(T model)
         {
-            await
-                _dbSet.AddAsync(model);
-
-            await
-                _context.SaveChangesAsync();
+            // Do not call SaveChanges here - UnitOfWork should commit.
+            await _dbSet.AddAsync(model);
         }
 
 
         public async Task Delete(int id)
         {
             var entity = await GetById(id);
-            
+            if (entity == null)
+                return; // nothing to delete
 
             _dbSet.Remove(entity);
 
-            await _context.SaveChangesAsync();
-
-            //NULL EX HANDLE LATER
+            // Do not call SaveChanges here - UnitOfWork should commit.
         }
 
 
 
         public async Task Update(T model)
         {
-            _context.Update(model);
-            await _context.SaveChangesAsync();
-
+            _dbSet.Update(model);
+            // Do not call SaveChanges here - UnitOfWork should commit.
+            await Task.CompletedTask;
         }
 
         public IQueryable<T> GetAllQueryable()
