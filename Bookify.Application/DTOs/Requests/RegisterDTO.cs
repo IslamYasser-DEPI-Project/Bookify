@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Bookify.Application.DTOs
+namespace Bookify.Application.DTOs.Requests
 {
     public class RegisterDto
     {

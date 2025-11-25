@@ -1,4 +1,4 @@
-﻿using Bookify.Application.DTOs;
+﻿using Bookify.Application.DTOs.Requests;
 using Bookify.Application.Interfaces;
 using Bookify.DA.Data;
 using Bookify.DA.Entities;
@@ -69,14 +69,27 @@ namespace Bookify.Application.Services.Registeration_Services
             // Mark user with a pending claim so admins can approve later.
             var pendingClaim = new Claim("AdminRequest", "Pending");
             var addClaimResult = await _userManager.AddClaimAsync(user, pendingClaim);
+
             if (!addClaimResult.Succeeded)
             {
-                // rollback user creation if adding claim fails
                 await _userManager.DeleteAsync(user);
                 return (false, addClaimResult.Errors.Select(e => e.Description), string.Empty);
             }
 
+            
+            var approvalRequest = new AdminApprovalRequest
+            {
+                UserId = user.Id,
+                Email = user.Email!,
+                RequestedAt = DateTime.UtcNow,
+                IsApproved = false
+            };
+
+            _dbContext.AdminApprovalRequests.Add(approvalRequest);
+            await _dbContext.SaveChangesAsync();
+
             return (true, Enumerable.Empty<string>(), "Waiting for approval");
+
         }
 
         public async Task<(bool Success, string Token, string Error)> LoginAsync(LoginDto loginDto)

@@ -1,4 +1,5 @@
 using Bookify.Application.Interfaces;
+using Bookify.Application.Services.Admin_Services;
 using Bookify.Application.Services.Registeration_Services;
 using Bookify.DA;
 using Bookify.DA.Data;
@@ -8,9 +9,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Linq;
 using System.Security.Claims;
 using System.Text;
-using System.Linq;
 
 namespace Bookify.API
 {
@@ -36,7 +37,7 @@ namespace Bookify.API
                     Scheme = "bearer",
                     BearerFormat = "JWT",
                     In = ParameterLocation.Header,
-                    Description = "Enter 'Bearer {token}'"
+                    Description = "Enter '{token}'"
                 };
 
                 c.AddSecurityDefinition("Bearer", securityScheme);
@@ -64,6 +65,7 @@ namespace Bookify.API
 
             builder.Services.AddDataAccessServices(connectionString);
             builder.Services.AddScoped<IAccountService, AccountService>();
+            builder.Services.AddScoped<IAdminService, AdminService>();
             builder.Services.AddIdentity<IdentityUser, IdentityRole>()
                 .AddEntityFrameworkStores<AppDbContext>();
 

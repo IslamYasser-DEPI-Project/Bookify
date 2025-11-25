@@ -1,4 +1,4 @@
-﻿using Bookify.Application.DTOs;
+﻿using Bookify.Application.DTOs.Requests;
 using Bookify.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
