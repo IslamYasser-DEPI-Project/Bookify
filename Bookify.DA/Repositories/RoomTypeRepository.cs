@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Bookify.DA.Contracts.RepositoryContracts;
 using Bookify.DA.Data;
 using Bookify.DA.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace Bookify.DA.Repositories
 {
@@ -13,6 +14,21 @@ namespace Bookify.DA.Repositories
     {
         public RoomTypeRepository(AppDbContext context) : base(context)
         {
+        }
+
+        public async Task<IEnumerable<RoomType>> GetAllWithCountsAsync()
+        {
+            // Include Rooms so caller can inspect Rooms.Count
+            return await GetAllQueryable()
+                .Include(rt => rt.Rooms)
+                .ToListAsync();
+        }
+
+        public async Task<RoomType?> GetWithRoomsAsync(int id)
+        {
+            return await GetAllQueryable()
+                .Include(rt => rt.Rooms)
+                .FirstOrDefaultAsync(rt => rt.Id == id);
         }
     }
 }

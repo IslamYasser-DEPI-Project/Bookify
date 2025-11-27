@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Bookify.DA.Contracts.RepositoryContracts;
 using Bookify.DA.Data;
 using Bookify.DA.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace Bookify.DA.Repositories
 {
@@ -15,5 +16,14 @@ namespace Bookify.DA.Repositories
         {
         }
 
+        public async Task<PaymentType?> GetByNameAsync(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return null;
+
+            
+            return await _context.PaymentTypes
+                .FirstOrDefaultAsync(pt => pt.TypeName.Equals(name, StringComparison.OrdinalIgnoreCase));
+        }
     }
 }

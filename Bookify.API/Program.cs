@@ -86,6 +86,7 @@ namespace Bookify.API
             builder.Services.AddScoped<IAdminService, AdminService>();
             builder.Services.AddHttpContextAccessor();
             builder.Services.AddScoped<IReservationCartService, ReservationCartService>();
+            builder.Services.AddScoped<ICustomerService, CustomerService>();
             builder.Services.AddIdentity<IdentityUser, IdentityRole>()
                 .AddEntityFrameworkStores<AppDbContext>();
 

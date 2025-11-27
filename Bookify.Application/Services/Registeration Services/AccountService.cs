@@ -45,14 +45,14 @@ namespace Bookify.Application.Services.Registeration_Services
                 return (false, new[] { "Invalid role specified. Allowed values: Admin, Customer." }, string.Empty);
             }
 
-            // Create Identity user for both flows (we will control role assignment)
+            
             var user = new IdentityUser { UserName = registerDto.Email, Email = registerDto.Email };
             var result = await _userManager.CreateAsync(user, registerDto.Password);
 
             if (!result.Succeeded)
                 return (false, result.Errors.Select(e => e.Description), string.Empty);
 
-            // If customer -> assign immediately
+            // If customer -> assign immediately and create Customer profile row
             if (string.Equals(requestedRole, "Customer", StringComparison.OrdinalIgnoreCase))
             {
                 var roleResult = await _userManager.AddToRoleAsync(user, "Customer");
@@ -61,6 +61,18 @@ namespace Bookify.Application.Services.Registeration_Services
                     await _userManager.DeleteAsync(user);
                     return (false, roleResult.Errors.Select(e => e.Description), string.Empty);
                 }
+
+                //customer record linked to identity
+                var customer = new Customer
+                {
+                    UserId = user.Id,
+                    Email = user.Email ?? string.Empty,
+                    Name = user.UserName ?? user.Email ?? string.Empty,
+                    Phone = string.Empty
+                };
+
+                _dbContext.Customers.Add(customer);
+                await _dbContext.SaveChangesAsync();
 
                 return (true, Enumerable.Empty<string>(), "Registration successful");
             }
