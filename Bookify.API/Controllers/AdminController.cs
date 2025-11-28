@@ -44,7 +44,6 @@ namespace Bookify.API.Controllers
 
 
 
-        // Approve admin request
         [HttpPost("approve-admin")]
         public async Task<IActionResult> ApproveAdmin([FromBody] ApproveAdminDTO dto)
         {
@@ -55,7 +54,7 @@ namespace Bookify.API.Controllers
             return Ok(result);
         }
 
-        // Reject admin request
+        
         [HttpPost("reject-admin")]
         public async Task<IActionResult> RejectAdmin([FromBody] ApproveAdminDTO dto)
         {

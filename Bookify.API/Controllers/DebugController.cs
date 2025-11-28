@@ -9,7 +9,7 @@ namespace Bookify.API.Controllers
     [Authorize]
     public class DebugController : ControllerBase
     {
-        // Call with same Authorization:<token> header you use for Admin endpoints
+        
         [HttpGet("whoami")]
         //listing claims of the current user
         public IActionResult WhoAmI()

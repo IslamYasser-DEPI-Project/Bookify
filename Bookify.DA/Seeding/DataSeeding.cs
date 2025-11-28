@@ -29,7 +29,7 @@ namespace Bookify.DA.Seeding
                     await roleManager.CreateAsync(new IdentityRole(role));
             }
 
-            // read admin from configuration 
+            //admin in configuration 
             var adminEmail = configuration["AdminUser:Email"];
             var adminPassword = configuration["AdminUser:Password"];
 
@@ -51,7 +51,7 @@ namespace Bookify.DA.Seeding
                 {
                     await userManager.AddToRoleAsync(admin, "Admin");
                 }
-                // Log errors will make it later...
+                // Log errors will make it later
             }
             else
             {
