@@ -1,5 +1,5 @@
 using Bookify.Application.Interfaces;
-using Bookify.Application.Services.Admin_Services;
+using Bookify.Application.Services.AdminServices;
 using Bookify.Application.Services.Registeration_Services;
 using Bookify.DA;
 using Bookify.DA.Data;
@@ -90,6 +90,8 @@ namespace Bookify.API
             builder.Services.AddScoped<IRoomService, RoomService>();
             builder.Services.AddScoped<IBookingService, BookingService>();
             builder.Services.AddScoped<IPaymentService, PaymentService>();
+            
+            builder.Services.AddScoped<IAdminManagementService, AdminManagementService>();
             builder.Services.AddIdentity<IdentityUser, IdentityRole>()
                 .AddEntityFrameworkStores<AppDbContext>();
 

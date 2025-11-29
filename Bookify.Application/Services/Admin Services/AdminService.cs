@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Bookify.Application.Services.Admin_Services
+namespace Bookify.Application.Services.AdminServices
 {
     public class AdminService : IAdminService
     {
