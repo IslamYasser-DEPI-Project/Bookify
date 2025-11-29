@@ -1,6 +1,7 @@
 ﻿using Bookify.DA.Contracts;
 using Bookify.DA.Contracts.RepositoryContracts;
 using Bookify.DA.Data;
+using Microsoft.EntityFrameworkCore.Storage;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,7 +23,6 @@ namespace Bookify.DA.Repositories
         private readonly Lazy<IRoomTypeRepository> _roomTypes;
         private readonly Lazy<IAdminApprovalRequest> _adminApprovalRequests;
 
-
         public UnitOfWork(AppDbContext db)
         {
             _db = db;
@@ -34,10 +34,7 @@ namespace Bookify.DA.Repositories
             _rooms = new Lazy<IRoomRepository>(() => new RoomRepository(_db));
             _roomTypes = new Lazy<IRoomTypeRepository>(() => new RoomTypeRepository(_db));
             _adminApprovalRequests = new Lazy<IAdminApprovalRequest>(() => new AdminApprovalRequestRepository(_db));
-
-
         }
-
 
         public IBookingRepository BookingRepository => _bookings.Value;
         public ICustomerRepository CustomerRepository => _customers.Value;
@@ -47,7 +44,6 @@ namespace Bookify.DA.Repositories
         public IRoomRepository RoomRepository => _rooms.Value;
         public IRoomTypeRepository RoomTypeRepository => _roomTypes.Value;
         public IAdminApprovalRequest AdminApprovalRequestRepository => _adminApprovalRequests.Value;
-        
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {

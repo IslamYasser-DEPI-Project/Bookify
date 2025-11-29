@@ -89,6 +89,7 @@ namespace Bookify.API
             builder.Services.AddScoped<ICustomerService, CustomerService>();
             builder.Services.AddScoped<IRoomService, RoomService>();
             builder.Services.AddScoped<IBookingService, BookingService>();
+            builder.Services.AddScoped<IPaymentService, PaymentService>();
             builder.Services.AddIdentity<IdentityUser, IdentityRole>()
                 .AddEntityFrameworkStores<AppDbContext>();
 
@@ -145,7 +146,16 @@ namespace Bookify.API
             var app = builder.Build();
 
             // Seed data
-            DataSeeding.SeedAsync(app.Services, builder.Configuration).GetAwaiter().GetResult();
+            try
+            {
+                DataSeeding.SeedAsync(app.Services, builder.Configuration).GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                var logger = app.Services.GetRequiredService<ILogger<Program>>();
+                logger.LogError(ex, "Data seeding failed during startup.");
+                throw;
+            }
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())

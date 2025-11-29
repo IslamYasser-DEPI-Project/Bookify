@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Bookify.DA.Contracts
 {
@@ -19,7 +20,12 @@ namespace Bookify.DA.Contracts
 
         IAdminApprovalRequest AdminApprovalRequestRepository { get; }
 
-
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+        // transaction management
+
+        //Task<IDbContextTransaction> BeginTransactionAsync();
+        //Task CommitTransactionAsync(IDbContextTransaction transaction);
+        //Task RollbackTransactionAsync(IDbContextTransaction transaction);
     }
 }

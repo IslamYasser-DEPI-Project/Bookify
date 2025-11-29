@@ -30,7 +30,6 @@ namespace Bookify.Application.Services
             if (cart?.Items == null || cart.Items.Count == 0)
                 throw new BookingException("Cart is empty");
 
-            // confirm customer exists
             var customer = await _uow.CustomerRepository
                 .GetAllQueryable()
                 .FirstOrDefaultAsync(c => c.UserId == userId);
@@ -46,7 +45,6 @@ namespace Bookify.Application.Services
                     throw new BookingException($"Room {item.RoomId} is not available for requested dates.");
             }
 
-            // Create bookings (all added before SaveChanges -> single SaveChangesAsync is transactional)
             var createdBookings = new List<Booking>();
             foreach (var item in cart.Items)
             {
@@ -63,9 +61,9 @@ namespace Bookify.Application.Services
                 createdBookings.Add(booking);
             }
 
+            // Single save for all changes
             await _uow.SaveChangesAsync();
 
-            // Map first created booking (method contract returns single BookingDto). If you want multiple, change signature.
             var b = createdBookings.First();
             return new BookingDto
             {
@@ -136,7 +134,6 @@ namespace Bookify.Application.Services
             var booking = await _uow.BookingRepository.GetById(bookingId);
             if (booking == null) return false;
 
-            // confirm ownership
             var customer = await _uow.CustomerRepository.GetByUserIdAsync(userId);
             if (customer == null || booking.CustomerID != customer.Id)
                 return false;
@@ -149,7 +146,6 @@ namespace Bookify.Application.Services
 
         public async Task<bool> ConfirmPaymentAsync(string bookingNumber, string stripePaymentIntentId)
         {
-            // Minimal implementation: mark booking as Confirmed. Payment recording/stripe handling should go in PaymentService.
             var booking = await _uow.BookingRepository.GetByBookingNumberAsync(bookingNumber);
             if (booking == null) return false;
 
@@ -157,7 +153,7 @@ namespace Bookify.Application.Services
             await _uow.BookingRepository.Update(booking);
             await _uow.SaveChangesAsync();
 
-            // TODO: create Payment entity here referencing stripePaymentIntentId and call PaymentRepository.Add(...)
+            // TODO: record payment via PaymentRepository
             return true;
         }
     }

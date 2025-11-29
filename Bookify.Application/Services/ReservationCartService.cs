@@ -80,7 +80,6 @@ namespace Bookify.Application.Services
             if (user == null || !user.Identity?.IsAuthenticated == true)
                 return (false, "User is not authenticated.", 0);
 
-            // Prefer ClaimTypes.NameIdentifier, fall back to JwtRegisteredClaimNames.Sub
             var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value
                          ?? user.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
 
@@ -96,34 +95,41 @@ namespace Bookify.Application.Services
 
             var bookedCount = 0;
 
-            foreach (var ci in items)
+            try
             {
-                // Basic validation: room exists
-                var room = await _unitOfWork.RoomRepository.GetById(ci.RoomId);
-                if (room == null)
-                    continue;
-
-                var booking = new Booking
+                foreach (var ci in items)
                 {
-                    CustomerID = customer.Id,
-                    RoomID = ci.RoomId,
-                    BookingDate = DateTime.UtcNow,
-                    CheckInDate = ci.CheckInDate,
-                    CheckOutDate = ci.CheckOutDate,
-                    Status = BookingStatus.Pending
-                };
+                    var room = await _unitOfWork.RoomRepository.GetById(ci.RoomId);
+                    if (room == null)
+                        continue;
 
-                await _unitOfWork.BookingRepository.Add(booking);
-                bookedCount++;
+                    var booking = new Booking
+                    {
+                        CustomerID = customer.Id,
+                        RoomID = ci.RoomId,
+                        BookingDate = DateTime.UtcNow,
+                        CheckInDate = ci.CheckInDate,
+                        CheckOutDate = ci.CheckOutDate,
+                        Status = BookingStatus.Pending
+                    };
+
+                    await _unitOfWork.BookingRepository.Add(booking);
+                    bookedCount++;
+                }
+
+                
+                await _unitOfWork.SaveChangesAsync();
+
+                // Clear cart state
+                ClearCart();
+
+                return (true, null, bookedCount);
             }
-
-            // Commit all bookings in a single Unit of Work transaction
-            await _unitOfWork.SaveChangesAsync();
-
-            // Clear session cart state (no tokens or credentials persisted)
-            ClearCart();
-
-            return (true, null, bookedCount);
+            catch (Exception ex)
+            {
+                // log if you have a logger
+                return (false, ex.Message, bookedCount);
+            }
         }
 
 
