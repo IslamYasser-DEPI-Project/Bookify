@@ -22,7 +22,6 @@ namespace Bookify.API.Controllers
             _uow = uow ?? throw new ArgumentNullException(nameof(uow));
         }
 
-        // DataTables-compatible list for rooms
         [HttpGet("rooms")]
         public async Task<IActionResult> GetRoomsForTable([FromQuery] int draw = 0, [FromQuery] int start = 0, [FromQuery] int length = 10, [FromQuery(Name = "search[value]")] string? search = null)
         {
@@ -123,7 +122,6 @@ namespace Bookify.API.Controllers
             return NoContent();
         }
 
-        // Delete room
         [HttpDelete("rooms/{id}")]
         public async Task<IActionResult> DeleteRoom(int id)
         {
@@ -132,7 +130,7 @@ namespace Bookify.API.Controllers
             return NoContent();
         }
 
-        // Room types list (DataTables)
+
         [HttpGet("room-types")]
         public async Task<IActionResult> GetRoomTypesForTable([FromQuery] int draw = 0, [FromQuery] int start = 0, [FromQuery] int length = 10, [FromQuery(Name = "search[value]")] string? search = null)
         {
