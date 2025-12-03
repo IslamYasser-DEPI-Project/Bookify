@@ -293,7 +293,7 @@ namespace Bookify.Application.Services
 
                     await UpsertPaymentAndConfirmBookingAsync(booking, "Stripe", amountFromBooking: amount);
                 }
-                // add other event types if needed
+                
             }
             catch (Exception ex)
             {

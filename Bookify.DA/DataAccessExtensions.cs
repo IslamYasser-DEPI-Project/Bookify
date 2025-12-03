@@ -25,7 +25,7 @@ namespace Bookify.DA
             // generic repo
             services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 
-            // specific repositories (registering so they can be injected individually if needed)
+            
             services.AddScoped<IBookingRepository, BookingRepository>();
             services.AddScoped<ICustomerRepository, CustomerRepository>();
             services.AddScoped<IHotelRepository, HotelRepository>();

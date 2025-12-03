@@ -18,7 +18,7 @@ namespace Bookify.DA.Repositories
 
         public async Task<IEnumerable<RoomType>> GetAllWithCountsAsync()
         {
-            // Include Rooms so caller can inspect Rooms.Count
+            
             return await GetAllQueryable()
                 .Include(rt => rt.Rooms)
                 .ToListAsync();
