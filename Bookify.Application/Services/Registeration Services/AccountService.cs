@@ -1,6 +1,6 @@
 ﻿using Bookify.Application.DTOs.Requests;
 using Bookify.Application.Interfaces;
-using Bookify.DA.Data;
+using Bookify.DA.Contracts;
 using Bookify.DA.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
@@ -19,13 +19,13 @@ namespace Bookify.Application.Services.Registeration_Services
     {
         private readonly UserManager<IdentityUser> _userManager;
         private readonly IConfiguration _configuration;
-        private readonly AppDbContext _dbContext;
+        private readonly IUnitOfWork _uow;
 
-        public AccountService(UserManager<IdentityUser> userManager, IConfiguration configuration, AppDbContext dbContext)
+        public AccountService(UserManager<IdentityUser> userManager, IConfiguration configuration, IUnitOfWork uow)
         {
             _userManager = userManager;
             _configuration = configuration;
-            _dbContext = dbContext;
+            _uow = uow;
         }
 
         public async Task<(bool Success, IEnumerable<string> Errors, string Message)> RegisterAsync(RegisterDto registerDto)
@@ -45,7 +45,6 @@ namespace Bookify.Application.Services.Registeration_Services
                 return (false, new[] { "Invalid role specified. Allowed values: Admin, Customer." }, string.Empty);
             }
 
-            
             var user = new IdentityUser { UserName = registerDto.Email, Email = registerDto.Email };
             var result = await _userManager.CreateAsync(user, registerDto.Password);
 
@@ -62,7 +61,7 @@ namespace Bookify.Application.Services.Registeration_Services
                     return (false, roleResult.Errors.Select(e => e.Description), string.Empty);
                 }
 
-                //customer record linked to identity
+                // customer record linked to identity, use UnitOfWork
                 var customer = new Customer
                 {
                     UserId = user.Id,
@@ -71,8 +70,8 @@ namespace Bookify.Application.Services.Registeration_Services
                     Phone = string.Empty
                 };
 
-                _dbContext.Customers.Add(customer);
-                await _dbContext.SaveChangesAsync();
+                await _uow.CustomerRepository.Add(customer);
+                await _uow.SaveChangesAsync();
 
                 return (true, Enumerable.Empty<string>(), "Registration successful");
             }
@@ -88,7 +87,6 @@ namespace Bookify.Application.Services.Registeration_Services
                 return (false, addClaimResult.Errors.Select(e => e.Description), string.Empty);
             }
 
-            
             var approvalRequest = new AdminApprovalRequest
             {
                 UserId = user.Id,
@@ -97,11 +95,10 @@ namespace Bookify.Application.Services.Registeration_Services
                 IsApproved = false
             };
 
-            _dbContext.AdminApprovalRequests.Add(approvalRequest);
-            await _dbContext.SaveChangesAsync();
+            await _uow.AdminApprovalRequestRepository.Add(approvalRequest);
+            await _uow.SaveChangesAsync();
 
             return (true, Enumerable.Empty<string>(), "Waiting for approval");
-
         }
 
         public async Task<(bool Success, string Token, string Error)> LoginAsync(LoginDto loginDto)
