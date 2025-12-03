@@ -35,7 +35,7 @@ namespace Bookify.DA.Repositories
 
         public async Task Add(T model)
         {
-            // Do not call SaveChanges here - UnitOfWork should commit.
+            
             await _dbSet.AddAsync(model);
         }
 
@@ -44,11 +44,11 @@ namespace Bookify.DA.Repositories
         {
             var entity = await GetById(id);
             if (entity == null)
-                return; // nothing to delete
+                return; 
 
             _dbSet.Remove(entity);
 
-            // Do not call SaveChanges here - UnitOfWork should commit.
+            
         }
 
 
