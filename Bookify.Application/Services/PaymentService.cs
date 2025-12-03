@@ -10,7 +10,6 @@ using Bookify.DA.Entities;
 using Bookify.DA.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using Stripe;
 using Stripe.Checkout;
 
@@ -23,15 +22,13 @@ namespace Bookify.Application.Services
         private readonly string _webhookSecret;
         private readonly string _successUrl;
         private readonly string _cancelUrl;
-        private readonly ILogger<PaymentService> _logger;
 
-        public PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration, ILogger<PaymentService> logger)
+        public PaymentService(IUnitOfWork unitOfWork, IConfiguration configuration)
         {
             _uow = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             if (configuration == null) throw new ArgumentNullException(nameof(configuration));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-
+            // Prefer the server secret key. If only a publishable key (pk_) is present, fail with a clear message.
             _stripeSecretKey = configuration["Stripe:SecretKey"] ?? string.Empty;
             var publishableKey = configuration["Stripe:ApiKey"] ?? string.Empty;
 
@@ -98,8 +95,8 @@ namespace Bookify.Application.Services
                 Mode = "payment",
                 Metadata = new Dictionary<string, string>
                 {
-                    { "bookingNumber", bookingNumber ?? string.Empty },
-                    { "userId", userId ?? string.Empty }
+                    { "bookingNumber", bookingNumber },
+                    { "userId", userId }
                 }
             };
 
@@ -142,9 +139,8 @@ namespace Bookify.Application.Services
                 var stripeEvent = EventUtility.ConstructEvent(payload, signature, _webhookSecret);
                 return Task.FromResult(stripeEvent != null);
             }
-            catch (Exception ex)
+            catch
             {
-                _logger.LogWarning(ex, "Stripe webhook signature verification failed.");
                 return Task.FromResult(false);
             }
         }
@@ -152,223 +148,163 @@ namespace Bookify.Application.Services
         public async Task ProcessPaymentWebhookAsync(string payload)
         {
             if (string.IsNullOrWhiteSpace(payload))
-            {
-                _logger.LogWarning("Empty webhook payload.");
                 return;
-            }
 
             JsonDocument doc;
             try
             {
                 doc = JsonDocument.Parse(payload);
             }
-            catch (Exception ex)
+            catch
             {
-                _logger.LogError(ex, "Invalid webhook JSON payload.");
                 return;
             }
 
             if (!doc.RootElement.TryGetProperty("type", out var typeProp))
-            {
-                _logger.LogWarning("Webhook event missing 'type' property.");
                 return;
-            }
 
             var eventType = typeProp.GetString();
-            _logger.LogInformation("Processing Stripe webhook event type={EventType}", eventType);
 
             try
             {
-
-                async Task<Booking?> ResolveBookingFromJsonElementAsync(JsonElement metadataElement)
-                {
-                    string? bookingNumber = null;
-                    string? userId = null;
-
-                    if (metadataElement.ValueKind == JsonValueKind.Object)
-                    {
-                        if (metadataElement.TryGetProperty("bookingNumber", out var bnEl) && bnEl.ValueKind == JsonValueKind.String)
-                            bookingNumber = bnEl.GetString();
-
-                        if (metadataElement.TryGetProperty("userId", out var uidEl) && uidEl.ValueKind == JsonValueKind.String)
-                            userId = uidEl.GetString();
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(bookingNumber) && int.TryParse(bookingNumber, out var bookingId))
-                    {
-                        var b = await _uow.BookingRepository.GetById(bookingId);
-                        if (b != null) return b;
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(userId))
-                    {
-
-                        var pending = await _uow.BookingRepository
-                            .GetAllQueryable()
-                            .Include(b => b.Customer)
-                            .Include(b => b.Room)
-                            .Where(b => b.Customer != null && b.Customer.UserId == userId && b.Status == BookingStatus.Pending)
-                            .OrderByDescending(b => b.BookingDate)
-                            .FirstOrDefaultAsync();
-
-                        if (pending != null) return pending;
-                    }
-
-                    return null;
-                }
-
                 if (eventType == "checkout.session.completed")
                 {
                     var session = doc.RootElement.GetProperty("data").GetProperty("object");
+                    var sessionId = session.GetProperty("id").GetString();
                     var paymentStatus = session.GetProperty("payment_status").GetString();
-                    string? sessionId = null;
-                    if (session.TryGetProperty("id", out var idEl)) sessionId = idEl.GetString();
 
-                    JsonElement metadataEl = default;
-                    if (session.TryGetProperty("metadata", out var metadata))
-                        metadataEl = metadata;
-
-                    var booking = await ResolveBookingFromJsonElementAsync(metadataEl);
-
-                    if (booking == null)
+                    string? bookingNumber = null;
+                    if (session.TryGetProperty("metadata", out var metadata) && metadata.ValueKind == JsonValueKind.Object)
                     {
-                        _logger.LogWarning("No booking found for checkout.session.completed (sessionId={SessionId}). Metadata: {Metadata}", sessionId, metadataEl.ToString());
-                        return;
+                        if (metadata.TryGetProperty("bookingNumber", out var bn))
+                            bookingNumber = bn.GetString();
                     }
 
-                    if (paymentStatus == "paid")
+                    if (!string.IsNullOrWhiteSpace(bookingNumber) && paymentStatus == "paid")
                     {
-                        await UpsertPaymentAndConfirmBookingAsync(booking, "Stripe", amountFromBooking: null);
-                    }
-                    else
-                    {
-                        _logger.LogInformation("checkout.session.completed with payment_status={PaymentStatus} for bookingId={BookingId}", paymentStatus, booking.Id);
+                        var booking = await _uow.BookingRepository.GetByBookingNumberAsync(bookingNumber);
+                        if (booking != null)
+                        {
+                            // compute amount from room type if possible
+                            decimal amount = 0m;
+                            var room = await _uow.RoomRepository.GetWithImagesAsync(booking.RoomID);
+                            if (room?.RoomType != null)
+                            {
+                                var nights = Math.Max(1, (booking.CheckOutDate - booking.CheckInDate).Days);
+                                amount = room.RoomType.PricePerNight * nights;
+                            }
+
+
+                            var stripeType = await _uow.PaymentTypeRepository
+                                .GetAllQueryable()
+                                .FirstOrDefaultAsync(pt => pt.TypeName == "Stripe");
+
+                            if (stripeType == null)
+                            {
+                                stripeType = new PaymentType { TypeName = "Stripe", Description = "Stripe payments" };
+                                await _uow.PaymentTypeRepository.Add(stripeType);
+                                await _uow.SaveChangesAsync();
+                            }
+
+
+                            var existing = (await _uow.PaymentRepository.GetByBookingIdAsync(booking.Id))
+                                .FirstOrDefault(p => p.PaymentTypeID == stripeType.Id /* further checks possible */);
+
+                            if (existing == null)
+                            {
+                                var payment = new Payment
+                                {
+                                    BookingID = booking.Id,
+                                    PaymentTypeID = stripeType.Id,
+                                    Amount = Math.Round(amount, 2),
+                                    Date = DateTime.UtcNow,
+                                    PaymentStatus = PaymentStatus.Completed
+                                };
+
+                                await _uow.PaymentRepository.Add(payment);
+                            }
+                            else
+                            {
+                                // optionally update existing payment status/amount
+                                existing.PaymentStatus = PaymentStatus.Completed;
+                                existing.Amount = Math.Round(amount, 2);
+                                await _uow.PaymentRepository.Update(existing);
+                            }
+
+                            booking.Status = BookingStatus.Confirmed;
+                            await _uow.BookingRepository.Update(booking);
+
+                            await _uow.SaveChangesAsync();
+                        }
                     }
                 }
                 else if (eventType == "payment_intent.succeeded")
                 {
                     var pi = doc.RootElement.GetProperty("data").GetProperty("object");
-                    JsonElement metadataEl = default;
-                    if (pi.TryGetProperty("metadata", out var metadata))
-                        metadataEl = metadata;
-
                     string? bookingNumber = null;
-                    if (metadataEl.ValueKind == JsonValueKind.Object && metadataEl.TryGetProperty("bookingNumber", out var bn) && bn.ValueKind == JsonValueKind.String)
-                        bookingNumber = bn.GetString();
-
-                    // attempt to resolve booking
-                    Booking? booking = null;
-                    if (!string.IsNullOrWhiteSpace(bookingNumber) && int.TryParse(bookingNumber, out var bid))
+                    if (pi.TryGetProperty("metadata", out var metadata) && metadata.ValueKind == JsonValueKind.Object)
                     {
-                        booking = await _uow.BookingRepository.GetById(bid);
+                        if (metadata.TryGetProperty("bookingNumber", out var bn))
+                            bookingNumber = bn.GetString();
                     }
 
-                    if (booking == null)
-                    {
-                        // fallback to user id in metadata
-                        if (metadataEl.ValueKind == JsonValueKind.Object && metadataEl.TryGetProperty("userId", out var uid) && uid.ValueKind == JsonValueKind.String)
-                        {
-                            var userId = uid.GetString();
-                            booking = await _uow.BookingRepository
-                                .GetAllQueryable()
-                                .Include(b => b.Customer)
-                                .Include(b => b.Room)
-                                .Where(b => b.Customer != null && b.Customer.UserId == userId && b.Status == BookingStatus.Pending)
-                                .OrderByDescending(b => b.BookingDate)
-                                .FirstOrDefaultAsync();
-                        }
-                    }
-
-                    if (booking == null)
-                    {
-                        _logger.LogWarning("No booking found for payment_intent.succeeded. Metadata: {Metadata}", metadataEl.ToString());
-                        return;
-                    }
-
+                    var intentId = pi.GetProperty("id").GetString();
                     long amountReceivedCents = 0;
                     if (pi.TryGetProperty("amount_received", out var ar) && ar.TryGetInt64(out var arVal))
                         amountReceivedCents = arVal;
 
-                    decimal amount = amountReceivedCents > 0 ? amountReceivedCents / 100m : 0m;
-
-                    await UpsertPaymentAndConfirmBookingAsync(booking, "Stripe", amountFromBooking: amount);
-                }
-                
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error while processing Stripe webhook event.");
-            }
-        }
-
-        private async Task UpsertPaymentAndConfirmBookingAsync(Booking booking, string paymentTypeName, decimal? amountFromBooking = null)
-        {
-            if (booking == null) throw new ArgumentNullException(nameof(booking));
-
-            try
-            {
-
-                decimal amount = 0m;
-                var room = await _uow.RoomRepository.GetWithImagesAsync(booking.RoomID);
-                if (room?.RoomType != null)
-                {
-                    var nights = Math.Max(1, (booking.CheckOutDate - booking.CheckInDate).Days);
-                    amount = room.RoomType.PricePerNight * nights;
-                }
-
-                if (amountFromBooking.HasValue && amountFromBooking.Value > 0m)
-                    amount = amountFromBooking.Value;
-
-                // ensure PaymentType exists
-                var stripeType = await _uow.PaymentTypeRepository
-                    .GetAllQueryable()
-                    .FirstOrDefaultAsync(pt => pt.TypeName == paymentTypeName);
-
-                if (stripeType == null)
-                {
-                    stripeType = new PaymentType { TypeName = paymentTypeName, Description = $"{paymentTypeName} payments" };
-                    await _uow.PaymentTypeRepository.Add(stripeType);
-                    await _uow.SaveChangesAsync();
-                }
-
-                // check existing payment for booking & type to avoid duplicates
-                var existingPayments = (await _uow.PaymentRepository.GetByBookingIdAsync(booking.Id)).ToList();
-                var existing = existingPayments.FirstOrDefault(p => p.PaymentTypeID == stripeType.Id);
-
-                if (existing == null)
-                {
-                    var payment = new Payment
+                    if (!string.IsNullOrWhiteSpace(bookingNumber))
                     {
-                        BookingID = booking.Id,
-                        PaymentTypeID = stripeType.Id,
-                        Amount = Math.Round(amount, 2),
-                        Date = DateTime.UtcNow,
-                        PaymentStatus = PaymentStatus.Completed
-                    };
+                        var booking = await _uow.BookingRepository.GetByBookingNumberAsync(bookingNumber);
+                        if (booking != null)
+                        {
+                            decimal amount = amountReceivedCents / 100m;
 
-                    await _uow.PaymentRepository.Add(payment);
-                    _logger.LogInformation("Adding Payment for bookingId={BookingId}, amount={Amount}", booking.Id, payment.Amount);
+                            var stripeType = await _uow.PaymentTypeRepository
+                                .GetAllQueryable()
+                                .FirstOrDefaultAsync(pt => pt.TypeName == "Stripe");
+
+                            if (stripeType == null)
+                            {
+                                stripeType = new PaymentType { TypeName = "Stripe", Description = "Stripe payments" };
+                                await _uow.PaymentTypeRepository.Add(stripeType);
+                                await _uow.SaveChangesAsync();
+                            }
+
+                            // Avoid duplicates
+                            var existing = (await _uow.PaymentRepository.GetByBookingIdAsync(booking.Id))
+                                .FirstOrDefault(p => p.PaymentTypeID == stripeType.Id /* further checks possible */);
+
+                            if (existing == null)
+                            {
+                                var payment = new Payment
+                                {
+                                    BookingID = booking.Id,
+                                    PaymentTypeID = stripeType.Id,
+                                    Amount = Math.Round(amount, 2),
+                                    Date = DateTime.UtcNow,
+                                    PaymentStatus = PaymentStatus.Completed
+                                };
+                                await _uow.PaymentRepository.Add(payment);
+                            }
+                            else
+                            {
+                                existing.PaymentStatus = PaymentStatus.Completed;
+                                existing.Amount = Math.Round(amount, 2);
+                                await _uow.PaymentRepository.Update(existing);
+                            }
+
+                            booking.Status = BookingStatus.Confirmed;
+                            await _uow.BookingRepository.Update(booking);
+
+                            await _uow.SaveChangesAsync();
+                        }
+                    }
                 }
-                else
-                {
-                    existing.PaymentStatus = PaymentStatus.Completed;
-                    existing.Amount = Math.Round(amount, 2);
-                    await _uow.PaymentRepository.Update(existing);
-                    _logger.LogInformation("Updated existing Payment (Id={PaymentId}) for bookingId={BookingId}", existing.Id, booking.Id);
-                }
-
-
-                booking.Status = BookingStatus.Confirmed;
-                await _uow.BookingRepository.Update(booking);
-
-                // commit
-                await _uow.SaveChangesAsync();
-                _logger.LogInformation("Payment recorded and booking confirmed for bookingId={BookingId}", booking.Id);
             }
-            catch (Exception ex)
+            catch
             {
-                _logger.LogError(ex, "Failed to upsert payment and confirm booking for bookingId={BookingId}", booking.Id);
-                throw;
+                //logging
             }
         }
     }
