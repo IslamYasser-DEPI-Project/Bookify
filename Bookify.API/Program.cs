@@ -15,6 +15,10 @@ using System.Text;
 using System;
 using Microsoft.AspNetCore.Http;
 using Bookify.Application.Services;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using System.Text.Json;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+
 
 namespace Bookify.API
 {
@@ -27,6 +31,10 @@ namespace Bookify.API
             // Add services to the container.
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
+
+            // Health checks: verify DB connectivity using AppDbContext
+            builder.Services.AddHealthChecks()
+                .AddDbContextCheck<AppDbContext>(name: "database", tags: new[] { "ready" });
 
             //session support 
             builder.Services.AddDistributedMemoryCache();
@@ -173,6 +181,28 @@ namespace Bookify.API
 
             app.UseAuthentication();
             app.UseAuthorization();
+
+            
+            app.MapHealthChecks("/health", new HealthCheckOptions
+            {
+                Predicate = (check) => check.Tags.Contains("ready"),
+                ResponseWriter = async (context, report) =>
+                {
+                    context.Response.ContentType = "application/json";
+                    var result = new
+                    {
+                        status = report.Status.ToString(),
+                        totalDurationMs = report.TotalDuration.TotalMilliseconds,
+                        checks = report.Entries.Select(e => new
+                        {
+                            name = "BookifyDb",
+                            status = e.Value.Status.ToString(),
+                            
+                        })
+                    };
+                    await context.Response.WriteAsync(JsonSerializer.Serialize(result));
+                }
+            });
 
             app.MapControllers();
 
